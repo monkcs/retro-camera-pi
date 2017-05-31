@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Setup the Retro Camera Pi software
+
+if [ $# -lt 1 ]; then
+	echo "Usage: $0 filesize-of-virtualdisk[kiB]"
+        exit 1
+fi
+
+# Install python modules for gpio and camera
+apt-get update -y
+apt-get upgrade -y
+apt-get install python3 python3-gpiozero python3-picamera python3-pkg-resources gpac python3-pip -y
+pip3 install subprocess.run
+
+# Copy script files
+cp retro-camera-pi /usr/local/bin/
+cp enable-usb-composite-kernel-modules /usr/local/bin/
+cp manage-usb-gadget-mass-storage /usr/local/bin/
+cp create-fat32-virtualdisk /usr/local/bin/
+cp manage-video-convertion /usr/local/bin/
+chmod 755 /usr/local/bin/*
+
+# Setup enviroment
+mkdir /var/local/retro-camera-pi
+mkdir /mnt/usb-composite-virtualdisk
+/usr/local/bin/enable-usb-composite-kernel-modules
+/usr/local/bin/create-fat32-virtualdisk $1 /var/local/retro-camera-pi/virtualdisk.bin
+
+# Copy service file
+cp retro-camera-pi.service /etc/systemd/system/
+chmod 664 /etc/systemd/system/retro-camera-pi.service
+
+# Start service
+systemctl daemon-reload
+systemctl enable retro-camera-pi.service
+systemctl start retro-camera-pi.service

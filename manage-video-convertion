@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Convert and concatenate video files
+
+if [ $# -lt 2 ]; then
+	echo "Convert and concatenate video files"
+	echo ""
+	echo "Usage: $0 --option filename[base] filename[concatenate](optional) filename[output]"
+	echo "-b, --basefile   : Convert input file to mp4 output file"
+	echo "-c, --concatenate : Concatenate the first and second file into mp4 output file"
+	echo "NOTE - Will try to delete input files"
+exit
+fi
+
+if [ $1 == "-b" ] || [ $1 == "--basefile" ] ; then
+	MP4Box -add $2 $3
+	rm $2
+fi
+if [ $1 == "-c" ] || [ $1 == "--concatenate" ] ; then
+	MP4Box -add $2 -cat $3 /var/video-temporary-retro-camera-pi.part
+        rm $4
+        mv /var/video-temporary-retro-camera-pi.part $4
+fi

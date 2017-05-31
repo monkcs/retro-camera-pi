@@ -1,0 +1,11 @@
+[Unit]
+Description=Running the Retro Camera Pi software
+After=syslog.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/retro-camera-pi
+Restart=on-abort
+
+[Install]
+WantedBy=multi-user.target

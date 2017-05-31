@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+
+# The service script for Retro Camera Pi
+# From monkcs with love...
+
+import picamera
+import os.path
+import subprocess
+from time import sleep
+from gpiozero import LED
+from gpiozero import Button
+from signal import pause
+
+# Setup camera
+# The camera object
+camera = picamera.PiCamera()
+# Custom resulution to use the whole x-axis field of view
+camera.resolution = (1640, 922)
+# The resolution supports high framerate
+camera.framerate = 40
+# The camera module is rotated
+camera.rotation = 90
+# Boolean if the virtual disk are connected as a usb device
+usbStorageInUse = False
+
+# Setup buttons
+# The shutter button to record
+buttonShutter = Button(17,False)
+# The button to toggle flashlight
+buttonFlashToggle = Button(4,False)
+# The button to toggle between camera and usb storage mode
+buttonStorageToggle = Button(18,False)
+
+# Setup led
+# The indicator on the back of the camera
+ledFlashIndicator = LED(16)
+# The indicator if the device is in camera or storage mode
+ledStorageToggle = LED(26)
+# The white flash on the front
+ledFlash = LED(5)
+
+def recordingStart():
+    global usbStorageInUse
+    global camera
+
+    if usbStorageInUse == False:
+        if ledFlashIndicator.is_lit:
+            ledFlash.on()
+        else:
+            ledFlash.off()
+
+        # Start recording
+        if os.path.exists("/mnt/usb-composite-virtualdisk/recording.mp4"):
+            camera.start_recording('/mnt/usb-composite-virtualdisk/temporary-recording.h264')
+        else:
+            camera.start_recording('/mnt/usb-composite-virtualdisk/recording.h264')
+
+def recordingEnd():
+    global usbStorageInUse
+    global camera
+
+    if usbStorageInUse == False:
+        # End recording
+        camera.stop_recording()
+        ledFlash.off()
+
+        # Show that encoding takes place
+        ledStorageToggle.off()
+        # Concatenate files if needed
+        if os.path.exists("/mnt/usb-composite-virtualdisk/recording.mp4"):
+            subprocess.call(["manage-video-convertion", "--concatenate","/mnt/usb-composite-virtualdisk/recording.mp4", "/mnt/usb-composite-virtualdisk/temporary-recording.h264", "/mnt/usb-composite-virtualdisk/recording.mp4"])
+        else:
+            subprocess.call(["manage-video-convertion", "--basefile", "/mnt/usb-composite-virtualdisk/recording.h264", "/mnt/usb-composite-virtualdisk/recording.mp4"])
+        ledStorageToggle.on()
+
+def massStorageToggle():
+    global usbStorageInUse
+
+    # Shutdown the system before pulling the power
+    if buttonFlashToggle.is_pressed:
+        ledStorageToggle.on()
+        ledFlashIndicator.on()
+        subprocess.call(["systemctl", "poweroff"])
+
+    if usbStorageInUse:
+        usbStorageInUse = False
+        massStorageDisable()
+    else:
+        usbStorageInUse = True
+        massStorageEnable()
+
+def massStorageEnable():
+    subprocess.call(["umount", "/mnt/usb-composite-virtualdisk"])
+    subprocess.call(["manage-usb-gadget-mass-storage", "--mount", "/var/local/retro-camera-pi/virtualdisk.bin"])
+    ledStorageToggle.off()
+
+def massStorageDisable():
+    subprocess.call(["manage-usb-gadget-mass-storage", "--unmount"])
+    subprocess.call(["mount", "/var/local/retro-camera-pi/virtualdisk.bin", "/mnt/usb-composite-virtualdisk"])
+    ledStorageToggle.on()
+
+# Mount virtualdisk in filesystem
+massStorageDisable()
+
+# Setup events
+buttonShutter.when_pressed = recordingStart
+buttonShutter.when_released = recordingEnd
+buttonFlashToggle.when_pressed = ledFlashIndicator.toggle
+buttonStorageToggle.when_pressed = massStorageToggle
+
+# Make main thread just wait
+pause()

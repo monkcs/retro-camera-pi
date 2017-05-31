@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Create a filesystem in a file, and then format it to FAT32.
+
+if [ $# -lt 2 ]; then
+	echo "Usage: $0 filesize[kiB] output-file"
+        exit 1             
+fi
+
+FILENAME=$2
+dd if=/dev/zero of=$FILENAME bs=1024 count=$1 status=none
+mkfs.fat $FILENAME 1> /dev/null

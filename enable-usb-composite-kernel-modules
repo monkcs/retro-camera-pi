@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Enable device tree overlay and enable libcomposite module
+
+echo "dtoverlay=dwc2" | tee -a /boot/config.txt 1> /dev/null
+echo "dwc2" | tee -a /etc/modules 1> /dev/null
+
+echo "libcomposite" | tee -a /etc/modules 1> /dev/null

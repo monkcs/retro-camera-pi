@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Mount a filesystem as a usb gadget
+
+if [ $# -lt 1 ]; then
+	echo "Usage: $0 --option filename[filesystem to mount]"
+	echo "-m, --mount   : Enable kernel module"
+	echo "-u, --unmount : Disable kernel module"
+        echo $1
+exit 1
+fi
+
+if [ $1 == "-m" ] || [ $1 == "--mount" ] ; then
+	modprobe g_mass_storage file=$2 stall=0
+fi
+if [ $1 == "-u" ] || [ $1 == "--unmount" ] ; then
+	modprobe -r g_mass_storage
+fi
